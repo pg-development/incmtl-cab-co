@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>INCMTL Cab Co.</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e8eee4;--road:#ffffff;--case:#c5d0c0;--ink:#23312b;--mute:#6b7a72;--panel:#fbfcf9;--line:#d9e1d4;--node:#ffffff;--ok:#2f8f5b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15222a;--road:#35515f;--case:#0e191f;--ink:#e6eee9;--mute:#8fa3ab;--panel:#1c2e38;--line:#2b414d;--node:#1c2e38;--ok:#5fcf93}}
+:root[data-theme="dark"]{--bg:#15222a;--road:#35515f;--case:#0e191f;--ink:#e6eee9;--mute:#8fa3ab;--panel:#1c2e38;--line:#2b414d;--node:#1c2e38;--ok:#5fcf93}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
+#app{position:relative;height:100%}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
+#hud{position:absolute;left:18px;top:14px;pointer-events:none}
+#money{font-size:44px;font-weight:800;letter-spacing:-.02em;line-height:1}
+#sub{color:var(--mute);font-size:14px;margin-top:4px}
+#brand{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+#zoom{position:absolute;left:18px;bottom:18px;display:flex;flex-direction:column;gap:6px}
+#zoom button{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:700 20px inherit;cursor:pointer}
+#panel{position:absolute;right:12px;top:12px;bottom:12px;width:290px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:14px;overflow:auto;box-sizing:border-box}
+#hint{font-size:13px;line-height:1.45;color:var(--mute);margin-bottom:12px}
+.lbl{font-weight:700;font-size:13px;margin:14px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1.5px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:5px 11px;font:600 13px inherit;cursor:pointer;display:flex;align-items:center;gap:6px}
+.chip.on{border-color:var(--ink);background:var(--ink);color:var(--panel)}
+.dot{width:9px;height:9px;border-radius:50%}
+.card{border:1px solid var(--line);border-radius:14px;padding:12px}
+.card h3{margin:0 0 8px;font-size:17px}
+.seats{display:flex;gap:4px;margin-bottom:10px}
+.seats i{width:16px;height:16px;border-radius:5px;border:2px solid var(--line)}
+.seats i.f{background:var(--ink);border-color:var(--ink)}
+.seats i.a{border-color:var(--ink)}
+.btn{display:flex;justify-content:space-between;align-items:center;width:100%;border:1.5px solid var(--ink);background:none;color:var(--ink);border-radius:11px;padding:9px 11px;font:600 13px inherit;margin-top:6px;cursor:pointer;text-align:left}
+.btn small{display:block;font-weight:500;color:var(--mute);font-size:11.5px}
+.btn b{font-weight:800}
+.btn.no{opacity:.4;cursor:default}
+.chip,.btn{font-family:inherit;font-size:13px;font-weight:600}
+#zoom button{font-family:inherit;font-size:20px;font-weight:700}
+#sm.on{background:var(--ink);color:var(--panel)}
+#ok{position:absolute;left:calc(50% - 145px);transform:translateX(-50%);bottom:18px;display:none;border:0;border-radius:999px;background:var(--ink);color:var(--bg);font-family:inherit;font-size:17px;font-weight:800;padding:13px 32px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#toast{position:absolute;left:50%;top:18px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none}
+@media (max-width:720px){
+#panel{left:0;right:0;bottom:0;top:auto;width:auto;max-height:40%;border-radius:20px 20px 0 0;border-width:1px 0 0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+#zoom{bottom:calc(40% + 12px)}#ok{left:50%;bottom:calc(40% + 12px)}#money{font-size:34px}}
+</style></head><body>
+<div id="app"><canvas id="c"></canvas>
+<div id="hud"><div id="brand">INCMTL Cab Co.</div><div id="money">$0</div><div id="sub"></div></div>
+<div id="zoom"><button id="zi" aria-label="Przybliż">+</button><button id="zo" aria-label="Oddal">−</button></div>
+<aside id="panel"><div id="hint">Wybierz pojazd, zaznacz klientów (kliknięciem albo prostokątem) i zatwierdź przyciskiem OK. Kolejność zaznaczania to kolejność odbioru. Mapę przesuwasz dwoma palcami i przybliżasz szczypnięciem; na komputerze prawym przyciskiem myszy lub z Shiftem. Gra zapisuje się sama. Plusy na mapie to miejsca do kupienia.</div><div id="ui"></div></aside>
+<div id="toast"></div><button id="ok">OK</button></div>
+<script>
+const DIST=[{n:"Centrum",c:"#ef6f5e"},{n:"Port",c:"#2f9bd1"},{n:"Wzgórza",c:"#6fae4f"},{n:"Lotnisko",c:"#e9a820"}];
+const N=[["Rynek",500,360,0],["Dworzec",400,290,0],["Park",580,280,0],["Galeria",600,445,0],
+["Molo",745,330,1],["Stocznia",850,250,1],["Plaża",890,410,1],["Latarnia",780,500,1],
+["Wieża",290,200,2],["Obserwatorium",190,130,2],["Winnica",340,90,2],["Zamek",160,270,2],
+["Terminal",480,570,3],["Hotel",370,640,3],["Hangar",590,650,3]].map((a,i)=>({id:i,name:a[0],x:a[1],y:a[2],d:a[3],on:i<3,w:[]}));
+const E=[[0,1],[0,2],[1,2],[0,3],[3,12],[3,7],[2,4],[4,5],[4,6],[4,7],[6,7],[5,6],[1,8],[8,9],[8,10],[8,11],[9,11],[9,10],[0,12],[12,13],[12,14],[13,14]];
+const ENTRY=[0,4,8,12],dOn=[true,false,false,false];
+const T=[{k:"taxi",n:"Taksówka",cap:3,sp:50,fm:1,pr:120,col:"#f2b632",d:"Szybka i tania."},
+{k:"van",n:"Van",cap:5,sp:48,fm:.9,pr:450,col:"#4aa3c7",d:"Więcej miejsc."},
+{k:"bus",n:"Minibus",cap:8,sp:42,fm:.8,pr:1800,col:"#7a6fd1",d:"Duże grupy, niski zarobek na osobę."},
+{k:"limo",n:"Limuzyna",cap:3,sp:56,fm:2.2,pr:6000,col:"#2b2f36",d:"Podwójne stawki za luksus."}];
+const pick=new Set();let money=0,veh=[],pas=[],sel=null,spawnT=1,nB=0,dB=0,done=0,pid=0,vid=0,fx=[],hits=[];
+const $=id=>document.getElementById(id),cv=$("c"),ctx=cv.getContext("2d");
+let W=0,H=0,dpr=1,z=1,ox=0,oy=0,col={};
+const nodeCost=()=>Math.round(60*1.45**nB),distCost=()=>Math.round(400*3**dB);
+const price=i=>i==0&&!veh.length?0:Math.round(T[i].pr*1.3**veh.filter(v=>v.t==i).length);
+const speed=v=>T[v.t].sp*(1+.25*v.sl),lux=v=>1+.35*v.ll;
+const upC=(v,k)=>Math.round(k=="s"?70*1.8**v.sl:100*1.9**v.ll);
+const used=v=>v.pass.length+v.q.filter(a=>a.t=="p").length;
+const fmt=n=>"$"+Math.floor(n).toLocaleString("pl-PL");
+function toast(s){const t=$("toast");t.textContent=s;t.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.opacity=0,1700)}
+function route(a,b){const D=N.map(()=>1e9),P=[],U=new Set();D[a]=0;
+while(true){let u=-1;for(const n of N)if(n.on&&!U.has(n.id)&&D[n.id]<1e9&&(u<0||D[n.id]<D[u]))u=n.id;
+if(u<0||u==b)break;U.add(u);
+for(const [x,y] of E){const o=x==u?y:y==u?x:-1;if(o<0||!N[o].on)continue;const w=D[u]+Math.hypot(N[u].x-N[o].x,N[u].y-N[o].y);if(w<D[o]){D[o]=w;P[o]=u}}}
+if(D[b]>=1e9)return{path:[a],len:0};const p=[b];while(p[0]!=a)p.unshift(P[p[0]]);return{path:p,len:D[b]}}
+function addVeh(t){const v={id:++vid,t,x:N[0].x,y:N[0].y,node:0,path:[],q:[],pass:[],sl:0,ll:0,wait:0,ang:0};veh.push(v);sel=v;return v}
+function spawn(){const on=N.filter(n=>n.on&&n.w.length<3);if(!on.length)return;
+const o=on[Math.random()*on.length|0],ds=N.filter(n=>n.on&&n.id!=o.id),d=ds[Math.random()*ds.length|0];
+const p={id:++pid,from:o.id,to:d.id,pat:48,max:48,s:"w",veh:null};pas.push(p);o.w.push(p)}
+function drop(p){pick.delete(p);const i=pas.indexOf(p);if(i>=0)pas.splice(i,1)}
+function toggle(p){if(p.veh){const v=p.veh;v.q=v.q.filter(a=>a.p!==p);p.veh=null;return}
+if(!sel)return toast("Najpierw wybierz pojazd");
+if(pick.has(p)){pick.delete(p);return}
+if(used(sel)+pick.size>=T[sel.t].cap)return toast("Brak wolnych miejsc");
+pick.add(p)}
+function okGo(){if(!sel||!pick.size)return;for(const p of pick){if(p.s!="w")continue;p.veh=sel;sel.q.push({t:"p",p})}pick.clear();ui(1)}
+function boxSel(b){if(!sel)return toast("Najpierw wybierz pojazd");
+const x0=Math.min(b.x0,b.x1),x1=Math.max(b.x0,b.x1),y0=Math.min(b.y0,b.y1),y1=Math.max(b.y0,b.y1);
+const c=hits.filter(h=>h.p&&!h.p.veh&&h.x<x1&&h.x+h.w>x0&&h.y<y1&&h.y+h.h>y0).map(h=>h.p).filter(p=>!pick.has(p));
+c.sort((a,b)=>Math.hypot(N[a.from].x-sel.x,N[a.from].y-sel.y)-Math.hypot(N[b.from].x-sel.x,N[b.from].y-sel.y));
+for(const p of c){if(used(sel)+pick.size>=T[sel.t].cap){toast("Brak wolnych miejsc");break}pick.add(p)}ui(1)}
+function act(v,a){const p=a.p,n=N[a.t=="p"?p.from:p.to];
+if(a.t=="p"){n.w=n.w.filter(x=>x!==p);p.s="r";p.mult=.6+.4*p.pat/p.max;v.pass.push(p);v.q.push({t:"d",p})}
+else{const len=route(p.from,p.to).len,f=Math.round((2+len/100*9)*lux(v)*T[v.t].fm*p.mult);
+money+=f;done++;v.pass=v.pass.filter(x=>x!==p);drop(p);fx.push({x:n.x,y:n.y,t:"+"+fmt(f),l:1.4})}}
+function stepV(v,dt){
+if(v.wait>0){v.wait-=dt;return}
+if(!v.path.length){
+while(v.q.length){const a=v.q[0],tg=a.t=="p"?a.p.from:a.p.to;
+if(a.t=="p"&&a.p.s!="w"){v.q.shift();continue}
+if(v.node==tg){v.q.shift();act(v,a);v.wait=.35;return}
+v.path=route(v.node,tg).path.slice(1);if(!v.path.length){v.q.shift();continue}break}
+if(!v.path.length)return}
+const n=N[v.path[0]],dx=n.x-v.x,dy=n.y-v.y,d=Math.hypot(dx,dy),s=speed(v)*dt;
+if(d>.1)v.ang=Math.atan2(dy,dx);
+if(d<=s){v.x=n.x;v.y=n.y;v.node=n.id;v.path.shift()}else{v.x+=dx/d*s;v.y+=dy/d*s}}
+function update(dt){
+const cnt=N.filter(n=>n.on).length;spawnT-=dt;
+if(spawnT<=0){spawnT=Math.max(.9,5/(1+.2*(cnt-3)))*(.7+Math.random()*.6);spawn()}
+for(const p of pas.slice())if(p.s=="w"){p.pat-=dt;if(p.pat<=0){p.s="x";N[p.from].w=N[p.from].w.filter(x=>x!==p);if(p.veh)p.veh.q=p.veh.q.filter(a=>a.p!==p);drop(p);fx.push({x:N[p.from].x,y:N[p.from].y,t:"odszedł",l:1.2})}}
+veh.forEach(v=>stepV(v,dt));
+fx.forEach(f=>f.l-=dt);fx=fx.filter(f=>f.l>0)}
+function buyNode(n){const ent=ENTRY[n.d]==n.id&&!dOn[n.d],c=ent?distCost():nodeCost();
+if(money<c)return toast("Brakuje "+fmt(c-money));money-=c;n.on=true;if(ent){dOn[n.d]=true;dB++}else nB++;
+toast(ent?"Odblokowano dzielnicę: "+DIST[n.d].n:"Nowy punkt: "+n.name);save()}
+function ghost(n){return!n.on&&(dOn[n.d]||ENTRY[n.d]==n.id)}
+function readCol(){const s=getComputedStyle(document.documentElement);for(const k of["bg","road","case","ink","mute","node","panel"])col[k]=s.getPropertyValue("--"+k).trim()}
+function fit(){z=Math.min(W/1100,H/760)*(W>720?.92:1);ox=(W-(W>720?300:0))/2-540*z;oy=H/2-(W>720?370:330)*z}
+function resize(){dpr=devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr}
+function drawV(v){const t=T[v.t],l=t.k=="bus"?30:t.k=="van"?25:t.k=="limo"?28:22,w=12;
+ctx.save();ctx.translate(v.x,v.y);ctx.rotate(v.ang);ctx.fillStyle=t.col;ctx.strokeStyle="#fff";ctx.lineWidth=2;
+ctx.beginPath();ctx.roundRect(-l/2,-w/2,l,w,4);ctx.fill();ctx.stroke();
+ctx.fillStyle="rgba(255,255,255,.75)";ctx.fillRect(l/2-9,-w/2+2,4,w-4);ctx.restore();
+if(v===sel){ctx.strokeStyle=col.ink;ctx.lineWidth=1.6;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(v.x,v.y,21,0,7);ctx.stroke();ctx.setLineDash([])}
+ctx.fillStyle=col.ink;ctx.font="700 9px 'Bricolage Grotesque',sans-serif";ctx.textAlign="center";ctx.fillText(v.pass.length+"/"+T[v.t].cap,v.x,v.y-14)}
+function draw(){
+const F="'Bricolage Grotesque',system-ui,sans-serif";hits=[];
+ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=col.bg;ctx.fillRect(0,0,W,H);
+ctx.setTransform(dpr*z,0,0,dpr*z,dpr*ox,dpr*oy);
+DIST.forEach((d,i)=>{if(!dOn[i])return;const ns=N.filter(n=>n.d==i),cx=ns.reduce((s,n)=>s+n.x,0)/ns.length,cy=ns.reduce((s,n)=>s+n.y,0)/ns.length;
+const g=ctx.createRadialGradient(cx,cy,10,cx,cy,230);g.addColorStop(0,d.c+"38");g.addColorStop(1,d.c+"00");ctx.fillStyle=g;ctx.fillRect(cx-240,cy-240,480,480);
+ctx.fillStyle=d.c+"40";ctx.font="800 54px "+F;ctx.textAlign="center";ctx.fillText(d.n,cx,cy-120)});
+ctx.lineCap="round";
+for(const [a,b] of E){const A=N[a],B=N[b];
+if(A.on&&B.on){ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.strokeStyle=col.case;ctx.lineWidth=17;ctx.stroke();ctx.strokeStyle=col.road;ctx.lineWidth=11;ctx.stroke()}
+else if((A.on&&ghost(B))||(B.on&&ghost(A))){ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.strokeStyle=col.case;ctx.lineWidth=3;ctx.setLineDash([5,9]);ctx.stroke();ctx.setLineDash([])}}
+if(sel)sel.q.forEach((a,i)=>{const n=N[a.t=="p"?a.p.from:a.p.to];ctx.strokeStyle=T[sel.t].col;ctx.lineWidth=3;ctx.beginPath();ctx.arc(n.x,n.y,19,0,7);ctx.stroke();
+ctx.fillStyle=T[sel.t].col;ctx.beginPath();ctx.arc(n.x+15,n.y-15,8,0,7);ctx.fill();ctx.fillStyle="#fff";ctx.font="800 10px "+F;ctx.textAlign="center";ctx.fillText(i+1,n.x+15,n.y-11.5)});
+for(const n of N){const c=DIST[n.d].c;
+if(n.on){ctx.beginPath();ctx.arc(n.x,n.y,12,0,7);ctx.fillStyle=col.node;ctx.fill();ctx.lineWidth=5;ctx.strokeStyle=c;ctx.stroke();
+ctx.fillStyle=col.ink;ctx.font="700 12px "+F;ctx.textAlign="center";ctx.fillText(n.name,n.x,n.y+28)}
+else if(ghost(n)){ctx.beginPath();ctx.arc(n.x,n.y,13,0,7);ctx.setLineDash([4,4]);ctx.lineWidth=2.5;ctx.strokeStyle=c;ctx.stroke();ctx.setLineDash([]);
+ctx.fillStyle=c;ctx.font="800 16px "+F;ctx.textAlign="center";ctx.fillText("+",n.x,n.y+5.5)}}
+veh.forEach(drawV);
+fx.forEach(f=>{ctx.globalAlpha=Math.min(1,f.l);ctx.fillStyle=f.t[0]=="+"?"#2f8f5b":col.mute;ctx.font="800 15px "+F;ctx.textAlign="center";ctx.fillText(f.t,f.x,f.y-20-(1.4-f.l)*26);ctx.globalAlpha=1});
+ctx.setTransform(dpr,0,0,dpr,0,0);
+const S=Math.max(.8,Math.min(1.3,Math.sqrt(z)));
+for(const n of N){const sx=n.x*z+ox,sy=n.y*z+oy;
+if(n.on)n.w.forEach((p,i)=>{const d=N[p.to],txt="!  "+d.name;ctx.font="700 "+12*S+"px "+F;
+const w=ctx.measureText(txt).width+18*S,h=22*S,x=sx-w/2,y=sy-(34+i*27)*S;
+ctx.globalAlpha=p.veh?.6:1;ctx.fillStyle=DIST[d.d].c;ctx.beginPath();ctx.roundRect(x,y,w,h,h/2);ctx.fill();
+ctx.fillStyle="rgba(255,255,255,.45)";ctx.fillRect(x+h/2,y+h-3*S,(w-h)*Math.max(0,p.pat/p.max),2*S);
+if(p.veh){ctx.strokeStyle=T[p.veh.t].col;ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(x,y,w,h,h/2);ctx.stroke()}
+if(pick.has(p)){ctx.strokeStyle=col.ink;ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(x-3,y-3,w+6,h+6,h/2+3);ctx.stroke()}
+ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.textAlign="center";ctx.fillText(txt,sx,y+h/2+4.2*S);hits.push({x,y,w,h,p})});
+if(ghost(n)){const ent=ENTRY[n.d]==n.id&&!dOn[n.d],c=ent?distCost():nodeCost(),ok=money>=c,
+txt=(ent?DIST[n.d].n+" ":"")+fmt(c);ctx.font="700 "+12*S+"px "+F;const w=ctx.measureText(txt).width+16*S,h=22*S,x=sx-w/2,y=sy+20*S;
+ctx.beginPath();ctx.roundRect(x,y,w,h,h/2);if(ok){ctx.fillStyle=col.ink;ctx.fill()}else{ctx.strokeStyle=col.mute;ctx.lineWidth=1.5;ctx.stroke()}
+ctx.fillStyle=ok?col.bg:col.mute;ctx.textAlign="center";ctx.fillText(txt,sx,y+h/2+4.2*S);hits.push({x:sx-20*S,y:sy-16*S,w:40*S,h:60*S+h,g:n})}}}
+function drawSel(){if(!box)return;ctx.setTransform(dpr,0,0,dpr,0,0);const x=Math.min(box.x0,box.x1),y=Math.min(box.y0,box.y1),w=Math.abs(box.x1-box.x0),h=Math.abs(box.y1-box.y0);ctx.fillStyle="rgba(120,150,140,.18)";ctx.fillRect(x,y,w,h);ctx.strokeStyle=col.ink;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.strokeRect(x,y,w,h);ctx.setLineDash([])}
+const KEY="kursy_v1";let resetArm=false;
+function save(){try{localStorage.setItem(KEY,JSON.stringify({m:money,dn:done,nB,dB,dOn,on:N.map(n=>n.on),v:veh.map(v=>[v.t,v.sl,v.ll]),s:veh.indexOf(sel)}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(!s)return false;money=s.m;done=s.dn;nB=s.nB;dB=s.dB;s.dOn.forEach((x,i)=>dOn[i]=x);s.on.forEach((x,i)=>N[i].on=x);s.v.forEach(a=>{const v=addVeh(a[0]);v.sl=a[1];v.ll=a[2]});sel=veh[s.s]||veh[0];return veh.length>0}catch(e){return false}}
+function zoomAt(cx,cy,f){const nz=Math.max(.35,Math.min(4,z*f));f=nz/z;ox=cx-(cx-ox)*f;oy=cy-(cy-oy)*f;z=nz}
+const ptr=new Map();let moved=0,pd=0,box=null,pm=null,multi=false;
+cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.offsetX,y:e.offsetY,sx:e.offsetX,sy:e.offsetY,pan:e.pointerType=="mouse"&&(e.button!=0||e.shiftKey)});moved=0;if(ptr.size==2){const[a,b]=[...ptr.values()];pd=Math.hypot(a.x-b.x,a.y-b.y);pm={x:(a.x+b.x)/2,y:(a.y+b.y)/2};moved=99;multi=true;box=null}});
+cv.addEventListener("pointermove",e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.offsetX-p.x,dy=e.offsetY-p.y;
+if(ptr.size==1&&!multi){moved+=Math.abs(dx)+Math.abs(dy);if(moved>6){if(p.pan){ox+=dx;oy+=dy}else box={x0:p.sx,y0:p.sy,x1:e.offsetX,y1:e.offsetY}}}
+p.x=e.offsetX;p.y=e.offsetY;
+if(ptr.size==2){moved=99;multi=true;box=null;const[a,b]=[...ptr.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;if(pm){ox+=mx-pm.x;oy+=my-pm.y}if(pd)zoomAt(mx,my,d/pd);pm={x:mx,y:my};pd=d}});
+cv.addEventListener("pointerup",e=>{if(ptr.has(e.pointerId)&&ptr.size==1){if(moved<=6){if(e.pointerType!="mouse"||e.button==0)click(e.offsetX,e.offsetY)}else if(box)boxSel(box)}box=null;ptr.delete(e.pointerId);if(!ptr.size)multi=false});
+cv.addEventListener("contextmenu",e=>e.preventDefault());
+cv.addEventListener("pointercancel",e=>ptr.delete(e.pointerId));
+cv.addEventListener("wheel",e=>{e.preventDefault();zoomAt(e.offsetX,e.offsetY,Math.exp(-e.deltaY*.0015))},{passive:false});
+$("zi").onclick=()=>zoomAt(W/2,H/2,1.3);$("zo").onclick=()=>zoomAt(W/2,H/2,1/1.3);
+function click(x,y){for(let i=hits.length-1;i>=0;i--){const h=hits[i];if(x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h){if(h.p)toggle(h.p);else buyNode(h.g);return ui(1)}}
+const wx=(x-ox)/z,wy=(y-oy)/z;let best=null,bd=22/z;for(const v of veh){const d=Math.hypot(v.x-wx,v.y-wy);if(d<bd){bd=d;best=v}}
+if(best){if(best!==sel)pick.clear();sel=best;ui(1)}else if(pick.size){pick.clear();ui(1)}}
+let sig="";
+function ui(force){
+const s=JSON.stringify([veh.map(v=>[v.id,used(v),v.sl,v.ll]),sel&&sel.id,T.map((t,i)=>money>=price(i)),sel&&[money>=upC(sel,"s"),money>=upC(sel,"l")]]);
+if(s==sig&&!force)return;sig=s;
+let h=`<div class="lbl" style="margin-top:0">Pojazdy</div><div class="chips">${veh.map(v=>`<button class="chip ${v===sel?"on":""}" data-a="sel:${v.id}"><span class="dot" style="background:${T[v.t].col}"></span>${T[v.t].n} ${used(v)}/${T[v.t].cap}</button>`).join("")}</div>`;
+if(sel){const v=sel,t=T[v.t];
+h+=`<div class="card" style="margin-top:10px"><h3>${t.n}</h3><div class="seats">${Array.from({length:t.cap},(_,i)=>`<i class="${i<v.pass.length?"f":i<used(v)?"a":""}"></i>`).join("")}</div>`+
+[["s","Szybkość",v.sl,"+25% prędkości"],["l","Luksus",v.ll,"+35% stawki"]].map(([k,n,l,d])=>l>=6?`<div class="btn no"><span>${n}<small>Maksymalny poziom</small></span><b>${l}</b></div>`:`<button class="btn ${money>=upC(v,k)?"":"no"}" data-a="up:${k}"><span>${n} (poz. ${l})<small>${d}</small></span><b>${fmt(upC(v,k))}</b></button>`).join("")+`</div>`}
+h+=`<div class="lbl">Salon</div>`+T.map((t,i)=>`<button class="btn ${money>=price(i)?"":"no"}" data-a="buy:${i}"><span>${t.n} · ${t.cap} miejsc<small>${t.d}</small></span><b>${price(i)?fmt(price(i)):"0"}</b></button>`).join("");
+h+=`<button class="btn" data-a="reset" style="margin-top:16px"><span>Nowa gra<small>Zeruje zapis</small></span></button>`;$("ui").innerHTML=h}
+$("ui").addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const[a,k]=b.dataset.a.split(":");
+if(a=="reset"){if(resetArm){try{localStorage.removeItem(KEY)}catch(e){}location.reload();return}resetArm=true;toast("Kliknij jeszcze raz, aby zacząć od nowa");setTimeout(()=>resetArm=false,3000);return}
+if(a=="sel"){sel=veh.find(v=>v.id==k);pick.clear()}
+if(a=="up"&&sel){const c=upC(sel,k);if(money<c)return;money-=c;k=="s"?sel.sl++:sel.ll++;save()}
+if(a=="buy"){const c=price(+k);if(money<c)return;money-=c;addVeh(+k);toast("Nowy pojazd: "+T[+k].n);save()}
+ui(1)});
+let last=performance.now(),fr=0;
+function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;update(dt);if(fr++%60==0)readCol();if(fr%1200==0)save();draw();drawSel();$("ok").style.display=pick.size?"block":"none";$("ok").textContent="OK ("+pick.size+")";
+$("money").textContent=fmt(money);$("sub").textContent="Oczekuje: "+pas.filter(p=>p.s=="w").length+" · Kursów: "+done;ui();requestAnimationFrame(loop)}
+$("ok").onclick=okGo;
+addEventListener("keydown",e=>{if(e.key=="Enter")okGo();if(e.key=="Escape"){pick.clear();ui(1)}});
+addEventListener("visibilitychange",()=>{if(document.hidden)save()});addEventListener("pagehide",save);
+resize();fit();readCol();if(!load())addVeh(0);spawn();spawn();ui(1);
+addEventListener("resize",()=>{resize()});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",readCol);
+requestAnimationFrame(loop);
+</script></body></html>
